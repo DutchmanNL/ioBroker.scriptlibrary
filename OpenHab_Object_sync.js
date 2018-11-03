@@ -1,7 +1,7 @@
 //******************************************
 //*****************Dutchman*****************
 //*** interact openhab items wih iObroker***
-//*******************V 0.6****************** 
+//*******************V 0.8****************** 
 //******************************************
 //******************************************
 
@@ -24,6 +24,10 @@ var objvalue;
 var find;
 var replace;
 var objid;
+var operation_lock_Device = false;
+var operation_lock_OpenHab = false;
+var lock_timeout;
+var lock_timeout_source;
 
 // Read all enums related to enum.functions
 functions = getEnums('functions');
@@ -40,10 +44,12 @@ for (var i in functions){
 if (getState("openhab.0.info.connection").val === true) {
     
     connected = true;
+    syncronizing= false;
     
 } else {
    
     connected = false;
+    syncronizing= false;
 }
 
 log("OpenHab connection = " + connected);
@@ -76,7 +82,7 @@ on({id: "openhab.0.info.connection", change: "ne"}, function (obj) {
         
         str_array[i] = str_array[i].replace(/^\s*/, "").replace(/\s*$/, "");
 
-        try{
+//        try{
         
         //retrieve device name for all found devices, replace unsupportet characters 
         objid = getObject(str_array[i])._id;
@@ -94,7 +100,7 @@ on({id: "openhab.0.info.connection", change: "ne"}, function (obj) {
         setState("openhab.0.items." + objname, getState(objid).val);
 
         
-        }   catch(e){}
+//        }   catch(e){}
         
         if (getState("openhab.0.info.connection").val === true && i == target){    
                         
@@ -117,8 +123,8 @@ on({id: device, change: 'any'}, function(obj) {
     var objname = obj.id;
     var objvalue = obj.state.val;
 
-    if (connected === true && syncronizing === false ){
-        
+    if (connected === true && syncronizing === false && operation_lock_Device === false){
+        operation_lock_Device = true;
         //Replace unsupported characters for OpenHab
         objname = objname.split('.').join("__");
         objname = objname.split('-').join("___");
@@ -134,6 +140,13 @@ on({id: device, change: 'any'}, function(obj) {
         
         }    
     }
+
+    (function () {if (lock_timeout_source) {clearTimeout(lock_timeout_source); lock_timeout_source = null;}})();
+    lock_timeout_source = setTimeout(function () {
+        operation_lock_Device = false;
+    }, 2000);
+
+    
 });
 
 
@@ -142,10 +155,17 @@ on({id: device, change: 'any'}, function(obj) {
 on({id: /^openhab.0.items\./, change: "any"}, function (obj) {
     var objname = obj.native.name;
     var objvalue = obj.state.val;    
+    
+    log(objname);
+    log(objvalue);
+    log(connected);
+    log(syncronizing);
+//    log("Operation_Lock = " + operation_lock);
 
     // Only run device syncronisation when OpenHab connection is active
-    if (connected === true && syncronizing === false ){
-
+    if (connected === true && syncronizing === false && operation_lock_OpenHab === false ){
+        
+        operation_lock_OpenHab = true;
         // Replacce '__' to '.' equal to state names of devices origin 
         var find = ["____"];
         var replace = ['#'];
@@ -172,15 +192,18 @@ on({id: /^openhab.0.items\./, change: "any"}, function (obj) {
         
         }
     
-    } else if (connected === false){
+    } else if (connected === false && syncronizing === false){
         
         console.warn("OpenHab adapter not connected, ignore syncronisation of value change to original device");
         
     }
+    
+    (function () {if (lock_timeout) {clearTimeout(lock_timeout); lock_timeout = null;}})();
+    lock_timeout = setTimeout(function () {
+        operation_lock_OpenHab = false;
+    }, 2000);
         
 });
-
-
 
 // Replacement function to items where reguar replace with split fails 
 function replaceStr(str, find, replace) {
