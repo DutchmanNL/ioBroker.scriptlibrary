@@ -10,6 +10,7 @@ Capabilities :
 - Syncronise values from iObroker to OpenHab when new items are created
 - react on changes in openhab and syncronize values to iobroker (for example for usage with GoogleHome)
 - react on changes in iobroker and syncronise states to OpenHab
+- prevent bouncing of value updates between the systems as some values are rounde in origin or target
 
 ToDo :
 
