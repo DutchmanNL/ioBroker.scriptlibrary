@@ -3,7 +3,7 @@
 //******************************************
 //*****************Dutchman*****************
 //*** interact openhab items wih iObroker***
-//*******************V 0.9.2**************** 
+//*******************V 0.9.4**************** 
 //******************************************
 //******************************************
 
@@ -19,17 +19,6 @@ var devices = "GoogleHome";
 var connected;
 var syncronizing = false;
 var device, timeout;
-var lockstate = {};
-
-/** 
- * @type {Map<string, any>}
- * A map of all expected state changes to prevent infinite loops.
- * Maps each controlled state to its expected value
- */
-const expectedStateChanges = new Map();
-// Any deviation from the expected value larger than this value
-// will be synced anyways
-const tolerance = 1.0;
 
 // Read all enums related to enum.functions
 /** @type {any[]} */
@@ -59,16 +48,16 @@ log("GoogleHome Script started || OpenHab connection = " + connected);
 on({ id: "openhab.0.info.connection", change: "ne" }, function (obj) {
     var connection_state = obj.state.val;
     console.log("OpenHab_Sync : Change on OpenHab connection");
-    console.log("#####################################################################################################")                
-    console.log("#####################################################################################################")
-    console.log("#####################################################################################################")            
+    console.log("#####################################################################################################");                
+    console.log("#####################################################################################################");
+    console.log("#####################################################################################################");           
     log("OpenHab connection : " + connected + " ||| Syncronizing items selected in function : " + devices);
-    console.log("#####################################################################################################")                
-    console.log("#####################################################################################################")
-    console.log("#####################################################################################################")
+    console.log("#####################################################################################################");                
+    console.log("#####################################################################################################");
+    console.log("#####################################################################################################");
 
 
-    var lockstate_timer = setTimeout(function () {
+//    var lockstate_timer = setTimeout(function () {
     //Store connection state in variable preventing triggers to process data 
     connected = connection_state;
     syncronizing = true;
@@ -89,9 +78,6 @@ on({ id: "openhab.0.info.connection", change: "ne" }, function (obj) {
                 console.debug("Device " + objid + " Found in GoogleHome function");
                 let objname = objid;
     
-                lockstate[objid] = false;
-                console.log("Verify value in object array, current state of " + objid + " = " + lockstate[objid] );
-    
                 //Replace unsupported characters for OpenHab
                 objname = objname.split('.').join("__");
                 objname = objname.split('-').join("___");
@@ -101,7 +87,18 @@ on({ id: "openhab.0.info.connection", change: "ne" }, function (obj) {
                 console.log("Value of " + objid + " written to openhab.0.items." + objname + "  || with value " + getState(objid).val);
     
                 // Write current value of origin to OpenHab
-                setState("openhab.0.items." + objname, getState(objid).val);
+                
+                try{
+                    
+                    setState("openhab.0.items." + objname, getState(objid).val);
+                    
+                    
+                } catch(e){
+                    
+                    console.error("No OpenHab item found for " + objid);
+                    console.error("Create device + " + " in Openhab or remove from GoogleHome function");
+                    
+                }
                 
     
     //            }   catch(e){
@@ -116,13 +113,13 @@ on({ id: "openhab.0.info.connection", change: "ne" }, function (obj) {
                     connected = true;
                     syncronizing = false;
     
-                    console.log("#####################################################################################################")                
-                    console.log("#####################################################################################################")
-                    console.log("#####################################################################################################")
+                    console.log("#####################################################################################################");                
+                    console.log("#####################################################################################################");
+                    console.log("#####################################################################################################");
                     console.log("Syncronisation finished, " + i + " devices and their current states syncronised to OpenHab");
-                    console.log("################OpenHab connection = " + connected + " , ready for processing data###################")                
-                    console.log("#####################################################################################################")
-                    console.log("#####################################################################################################")
+                    console.log("################OpenHab connection = " + connected + " , ready for processing data###################");                
+                    console.log("#####################################################################################################");
+                    console.log("#####################################################################################################");
     
                     console.log("OpenHab connection = " + connected + " , ready for processing data");
                 
@@ -134,13 +131,13 @@ on({ id: "openhab.0.info.connection", change: "ne" }, function (obj) {
                     syncronizing = false;
     
     
-                    console.log("#####################################################################################################")                
-                    console.log("#####################################################################################################")
-                    console.log("#####################################################################################################")
+                    console.log("#####################################################################################################");                
+                    console.log("#####################################################################################################");
+                    console.log("#####################################################################################################");
                     console.log("Syncronisation finished, " + i + " devices and their current states syncronised to OpenHab");
-                    console.log("#####################################################################################################")                
-                    console.log("#####################################################################################################")
-                    console.log("#####################################################################################################")
+                    console.log("#####################################################################################################");                
+                    console.log("#####################################################################################################");
+                    console.log("#####################################################################################################");
     
     
                     console.warn("OpenHab connection = " + connected + " , values will not be syncronised !!!");
@@ -152,41 +149,22 @@ on({ id: "openhab.0.info.connection", change: "ne" }, function (obj) {
             }
     
         }
-	}, 10000);    
-        return connected, lockstate;
+//	}, 10000);    
+        return connected, syncronizing;
 });
-
-
-on({id: "javascript.0.test_1", change: "ne"}, function (obj) {
-    console.log("shelly.0.SHSW-1#058A41#1.Relay0.Switch  =  " + lockstate["shelly.0.SHSW-1#058A41#1.Relay0.Switch"]);
-    console.log("shelly.0.SHSW-1#5B34B9#1.Relay0.Switch  =  " + lockstate["shelly.0.SHSW-1#5B34B9#1.Relay0.Switch"]);
-    console.log("shelly.0.SHSW-1#327C1A#1  =  " + lockstate["shelly.0.SHSW-1#5B34B9#1.Relay0.Switch"]);    
-    
-//    console.log(objid + " = " + lockstate[objid]);
-//    console.log(objid + " = " + lockstate[objid]);
-//    console.log(objid + " = " + lockstate[objid]);    
-    
-    
-});
-
-
-
 
 //Trigger on value changes in origin devices based on enum name
-on({ id: device, change: 'any', ack: true }, function (obj) {
+on({ id: device, change: 'ne'}, function (obj) {
     var objname = obj.id;
     var objvalue = obj.state.val;
+    
+    // retrieve data off last change of previous value and calculate difference with current time
+    // We do this to prevent multiple status changes within a given time-frame (5 seconds) to prevent loops in code
+    var diff_time = (new Date().getTime()) - (obj.oldState ? obj.oldState.lc : "");
 
-    // Test if this state change needs to be synced
-    if (!isSyncNecessary(obj.id, obj.state.val)) return;
+    console.log("Device trigger " + objname + " with value " + objvalue + " and previous change time diff  = " + diff_time);
 
-
-    if (connected === true && syncronizing === false) {
-
-        // Lock oject state for additonal changes
-        lockstate[objname] = true;
-        
-        // to-do : add timer to reset lockstate
+    if (connected === true && syncronizing === false && diff_time > 5000) {
 
         //Replace unsupported characters for OpenHab
         objname = objname.split('.').join("__");
@@ -196,35 +174,43 @@ on({ id: device, change: 'any', ack: true }, function (obj) {
 
         console.log("Value of origin changed, syncronizing to OpenHab : " + objname + "  || with value " + objvalue);
         const openhabID = "openhab.0.items." + objname;
-        rememberExpectedStateChange(openhabID, objvalue);
-        setState(openhabID, objvalue);
+        
+        
+        // tried error logging if device does not exist, not working other logic needed :/
+            setState(openhabID, objvalue);
 
         // ######################################################################################
         // ############# Migging Logic to show devices which are missing in OpenHab #############
         // ######################################################################################            
 
+
     } else if (connected === false) {
 
         // Log warning OpenHab connection not active
-        console.error("OpenHab adapter not connected, ignore syncronisation of value change to original device");
+        console.error("OpenHab adapter not connected, ignore syncronisation of value change from origin to OpenHab");
 
+    } else if (diff_time < 5000) {
+        
+        // write error to console if previous change time is < 5 seconds
+        console.error("Previous change of device " + objname + "less than 5 seconds ago, ignoring value change");
+        
     }
 
 });
 
 
-/*
 // Trigger on value changes within OpenHab item tree and syncronise value to origin if current is different
-on({ id: /^openhab.0.items\./, change: "any", ack: true }, function (obj) {
+on({ id: /^openhab.0.items\./, change: "any"}, function (obj) {
     // ^ we should probably ignore ack=false changes
     var objname = obj.native.name;
     var objvalue = obj.state.val;
+    // retrieve data off last change of previous value and calculate difference with current time
+    // We do this to prevent multiple status changes within a given time-frame (5 seconds) to prevent loops in code
+    var diff_time = (new Date().getTime()) - (obj.oldState ? obj.oldState.lc : "");
 
-    // Test if this state change needs to be synced
-    if (!isSyncNecessary(obj.id, obj.state.val)) return;
-
-    // Only run device syncronisation when OpenHab connection is active
-    if (connected === true && syncronizing === false) {
+    // Only run device syncronisation when OpenHab connection is active AND last change on value of item is > 5 seconds
+    // Only change value to origin object when current state is different from source and target
+    if (connected === true && syncronizing === false && diff_time > 5000 && objvalue !== getState(objname).val && objvalue != null) {
 
         // Replacce OpenHab character to original state name
         var find = ["____"];
@@ -239,34 +225,25 @@ on({ id: /^openhab.0.items\./, change: "any", ack: true }, function (obj) {
         replace = ['.'];
         objname = replaceStr(objname, find, replace);
 
-        // Only change value to origin object when current state is different from source and target
-        if (objvalue != null) {
-            // You probably wanted to test if objvalue != null (single =) because that tests against NULL and UNDEFINED
+        console.log("Value of item in OpenHab change, syncronizing to device " + objname + " with value : " + objvalue);
+        setState(objname, objvalue);
 
-            log("Value of item in OpenHab change, syncronizing to device " + objname + " with value : " + objvalue);
-            rememberExpectedStateChange(objname, objvalue);
-            setState(objname, objvalue);
+    } else if (diff_time < 5000){
 
-            // Syncronise state of origin device with OpenHab item in case of empty value (should not happen)
-        } else {
-            var objname_source = obj.native.name;
-            const openhabID = "openhab.0.items." + objname_source;
-            const expectedValue = getState(objname).val;
-            rememberExpectedStateChange(openhabID, expectedValue);
-            setState(openhabID, expectedValue);
+        // write error to console if previous change time is < 5 seconds
+        console.error("Previous change of device " + objname + "less than 5 seconds ago, ignoring value change");
 
-        }
-
-    } else if (connected === false || syncronizing === false) {
+    } else if (connected === false) {
         // I guess you meant OR, not AND
         // since this message should be printed when either not connected or not synchronizing
 
         // Log warning OpenHab connection not active
-        console.warn("OpenHab adapter not connected, ignore syncronisation of value change to original device");
-
+        console.error("OpenHab adapter not connected, ignore syncronisation of from OpenHab to Origin");
+        
     }
 
 });
+
 
 // Replacement function to items where reguar replace with split fails 
 function replaceStr(str, find, replace) {
@@ -274,40 +251,4 @@ function replaceStr(str, find, replace) {
         str = str.replace(new RegExp(find[i], 'gi'), replace[i]);
     }
     return str;
-}
-
-*/
-
-/**
- * Tests if a state change needs to be synced
- * @param {string} objID The ID of the state to be checked
- * @param {any} objVal The value of the state to be checked
- */
-function isSyncNecessary(objID, objVal) {
-    // Check if we expected this state change to prevent infinite loops
-    if (expectedStateChanges.has(objID)) {
-        // We expected this change - don't sync it unless its value has
-        // drastically changed for some reason
-        const expectedValue = expectedStateChanges.get(objID);
-        expectedStateChanges.delete(objID);
-
-        // Only compare numbers with tolerance
-        if (typeof expectedValue === "number" && Math.abs(expectedValue - objVal) < tolerance) {
-            // This change is within the tolerance, ignore it
-            return false;
-        } else if (typeof expectedValue !== "number" && expectedValue === objVal) {
-            // Any non-number values should only be ignored if they didn't change
-            return false;
-        }
-    }
-    return true;
-}
-
-/**
- * Remembers the expected value for a state change
- * @param {string} objID The ID of the state
- * @param {any} expectedValue The expected value for the state
- */
-function rememberExpectedStateChange(objID, expectedValue) {
-    expectedStateChanges.set(objID, expectedValue);
 }
