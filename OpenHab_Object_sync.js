@@ -3,7 +3,7 @@
 //******************************************
 //*****************Dutchman*****************
 //*** interact openhab items wih iObroker***
-//*******************V 0.9.4**************** 
+//*******************V 0.9.5**************** 
 //******************************************
 //******************************************
 
@@ -57,7 +57,7 @@ on({ id: "openhab.0.info.connection", change: "ne" }, function (obj) {
     console.log("#####################################################################################################");
 
 
-//    var lockstate_timer = setTimeout(function () {
+    var lockstate_timer = setTimeout(function () {
     //Store connection state in variable preventing triggers to process data 
     connected = connection_state;
     syncronizing = true;
@@ -149,7 +149,7 @@ on({ id: "openhab.0.info.connection", change: "ne" }, function (obj) {
             }
     
         }
-//	}, 10000);    
+	}, 10000);    
         return connected, syncronizing;
 });
 
@@ -192,7 +192,7 @@ on({ id: device, change: 'ne'}, function (obj) {
     } else if (diff_time < 5000) {
         
         // write error to console if previous change time is < 5 seconds
-        console.error("Previous change of device " + objname + "less than 5 seconds ago, ignoring value change");
+        console.error("Previous change of device " + objname + " less than 5 seconds ago, ignoring value change");
         
     }
 
@@ -210,20 +210,22 @@ on({ id: /^openhab.0.items\./, change: "any"}, function (obj) {
 
     // Only run device syncronisation when OpenHab connection is active AND last change on value of item is > 5 seconds
     // Only change value to origin object when current state is different from source and target
+
+
+    // Replacce OpenHab character to original state name
+    var find = ["____"];
+    var replace = ['#'];
+    objname = replaceStr(objname, find, replace);
+
+    find = ["___"];
+    replace = ['-'];
+    objname = replaceStr(objname, find, replace);
+
+    find = ["__"];
+    replace = ['.'];
+    objname = replaceStr(objname, find, replace);
+
     if (connected === true && syncronizing === false && diff_time > 5000 && objvalue !== getState(objname).val && objvalue != null) {
-
-        // Replacce OpenHab character to original state name
-        var find = ["____"];
-        var replace = ['#'];
-        objname = replaceStr(objname, find, replace);
-
-        find = ["___"];
-        replace = ['-'];
-        objname = replaceStr(objname, find, replace);
-
-        find = ["__"];
-        replace = ['.'];
-        objname = replaceStr(objname, find, replace);
 
         console.log("Value of item in OpenHab change, syncronizing to device " + objname + " with value : " + objvalue);
         setState(objname, objvalue);
@@ -252,3 +254,5 @@ function replaceStr(str, find, replace) {
     }
     return str;
 }
+
+
