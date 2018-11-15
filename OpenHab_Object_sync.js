@@ -1,9 +1,9 @@
-// @ts-check
+
 
 //******************************************
 //*****************Dutchman*****************
-//*** interact openhab items wih iObroker***
-//*******************V 0.1.0**************** 
+//* Syncronise openhab item with iObroker **
+//****************** V1.0 ****************** 
 //******************************************
 //******************************************
 
@@ -22,7 +22,6 @@ var syncronizing = false;
 var device, timeout;
 
 // Read all enums related to enum.functions
-/** @type {any[]} */
 const functions = getEnums('functions');
 
 // Loop on all values and store members of value "device" to variable
@@ -70,8 +69,6 @@ on({ id: "openhab.0.info.connection", val: true, change: "ne" }, function (obj) 
     
             str_array[i] = str_array[i].replace(/^\s*/, "").replace(/\s*$/, "");
     
-//            try{
-
             //retrieve device name for all found devices, replace unsupportet characters 
             const objid = str_array[i];
             const objvalue = getState(str_array[i]).val;
@@ -111,6 +108,7 @@ on({ id: "openhab.0.info.connection", val: true, change: "ne" }, function (obj) 
                 if (logging === true){console.log("#####################################################################################################")}
                 console.log("#### Syncronisation finished, " + i + " devices and their current states syncronised to OpenHab #####");
                 if (logging === true){console.log("############### OpenHab connection = " + connected + " , ready for processing data ##################")}                
+                if (logging === true){console.log("#####################################################################################################")}
                 if (logging === true){console.log("#####################################################################################################")}
                 if (logging === true){console.log("#####################################################################################################")}
     
@@ -153,7 +151,7 @@ on({ id: device, change: 'ne'}, function (obj) {
     var objname = obj.id;
     var objvalue = obj.state.val;
     
-    // retrieve data off last change of previous value and calculate difference with current time
+    // retrieve data last change of previous value and calculate difference with current time
     // We do this to prevent multiple status changes within a given time-frame (5 seconds) to prevent loops in code
     var diff_time = (new Date().getTime()) - (obj.oldState ? obj.oldState.lc : "");
 
@@ -165,7 +163,6 @@ on({ id: device, change: 'ne'}, function (obj) {
         objname = objname.split('.').join("__");
         objname = objname.split('-').join("___");
         objname = objname.split('#').join("____");
-        // ^ you do this multiple times throughout the code, so this should probably be a function
 
         if (logging === true){console.log("Value of origin changed, syncronizing to OpenHab : " + objname + "  || with value " + objvalue)}
 
@@ -210,7 +207,7 @@ on({ id: /^openhab.0.items\./, change: "any"}, function (obj) {
     // Only run device syncronisation when OpenHab connection is active AND last change on value of item is > 5 seconds
     // Only change value to origin object when current state is different from source and target
 
-    // Replacce OpenHab character to original state name
+    // Replace OpenHab character to original state name
     var find = ["____"];
     var replace = ['#'];
     objname = replaceStr(objname, find, replace);
@@ -234,9 +231,7 @@ on({ id: /^openhab.0.items\./, change: "any"}, function (obj) {
         if (logging === true){{console.error("Previous change of device " + objname + "less than 5 seconds ago, ignoring value change")}
 
     } else if (connected === false) {
-        // I guess you meant OR, not AND
-        // since this message should be printed when either not connected or not synchronizing
-
+A
         // Log warning OpenHab connection not active
         console.error("OpenHab adapter not connected, ignore syncronisation of item values from OpenHab Origin")}
         
