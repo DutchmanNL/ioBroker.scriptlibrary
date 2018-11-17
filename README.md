@@ -14,7 +14,6 @@ Capabilities :
 
 ToDo :
 
-- code-cleanup und comments
 - automated creation of item file from iObroker to OpenHab
 - better handling of items with special characters (OpenHab only supports "_")
 
